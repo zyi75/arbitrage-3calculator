@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>足球套利计算器 - Polymarket + 传统盘口</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #0f172a;
+            color: #f8fafc;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #1e293b;
+            border-radius: 12px;
+            border: 1px solid #334155;
+        }
+
+        header h1 {
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #3b82f6, #10b981);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        header p {
+            color: #94a3b8;
+            font-size: 0.9rem;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background: #1e293b;
+            border-radius: 12px;
+            border: 1px solid #334155;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid #334155;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .panel-header.poly {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(59, 130, 246, 0.05));
+        }
+
+        .panel-header.trad {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(16, 185, 129, 0.05));
+        }
+
+        .panel-header.result {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(34, 197, 94, 0.05));
+        }
+
+        .panel-header h2 {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .panel-header.poly h2 {
+            color: #3b82f6;
+        }
+
+        .panel-header.trad h2 {
+            color: #10b981;
+        }
+
+        .panel-header.result h2 {
+            color: #22c55e;
+        }
+
+        .icon {
+            width: 24px;
+            height: 24px;
+        }
+
+        .panel-body {
+            padding: 20px;
+        }
+
+        .input-group {
+            margin-bottom: 16px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 0.85rem;
+            color: #94a3b8;
+        }
+
+        .input-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+
+        .input-wrapper {
+            position: relative;
+        }
+
+        .input-wrapper input {
+            width: 100%;
+            padding: 12px;
+            background: #334155;
+            border: 2px solid transparent;
+            border-radius: 8px;
+            color: #f8fafc;
+            font-size: 1rem;
+            font-family: 'Roboto Mono', monospace;
+            transition: all 0.2s;
+        }
+
+        .input-wrapper input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            background: #475569;
+        }
+
+        .input-wrapper.poly input:focus {
+            border-color: #3b82f6;
+        }
+
+        .input-wrapper.trad input:focus {
+            border-color: #10b981;
+        }
+
+        .bet-amount-section {
+            background: #334155;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 20px;
+        }
+
+        .bet-amount-section label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            color: #f8fafc;
+        }
+
+        .bet-amount-section .amount-display {
+            background: #1e293b;
+            padding: 12px;
+            border-radius: 6px;
+            margin-top: 8px;
+            font-family: 'Roboto Mono', monospace;
+            color: #3b82f6;
+            font-size: 1rem;
+        }
+
+        .bet-amount-section .amount-display span {
+            color: #64748b;
+            font-size: 0.8rem;
+            display: block;
+            margin-top: 4px;
+        }
+
+        .btn-calculate {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-top: 20px;
+        }
+
+        .btn-calculate:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-calculate:active {
+            transform: translateY(0);
+        }
+
+        .results-section {
+            margin-top: 24px;
+        }
+
+        .strategy-card {
+            background: #334155;
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 16px;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .strategy-card.best {
+            border-color: #22c55e;
+            background: rgba(34, 197, 94, 0.1);
+        }
+
+        .strategy-card.loss {
+            border-color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .strategy-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .strategy-title {
+            font-size: 0.95rem;
+            font-weight: 600;
+        }
+
+        .strategy-card.best .strategy-title {
+            color: #22c55e;
+        }
+
+        .strategy-card.loss .strategy-title {
+            color: #ef4444;
+        }
+
+        .badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge.best {
+            background: #22c55e;
+            color: #0f172a;
+        }
+
+        .badge.warning {
+            background: #f59e0b;
+            color: #0f172a;
+        }
+
+        .strategy-details {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            font-size: 0.85rem;
+        }
+
+        .detail-item {
+            background: #1e293b;
+            padding: 10px;
+            border-radius: 6px;
+        }
+
+        .detail-item .label {
+            color: #64748b;
+            font-size: 0.75rem;
+            margin-bottom: 4px;
+        }
+
+        .detail-item .value {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 1rem;
+        }
+
+        .detail-item .value.positive {
+            color: #22c55e;
+        }
+
+        .detail-item .value.negative {
+            color: #ef4444;
+        }
+
+        .breakdown-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+            font-size: 0.85rem;
+        }
+
+        .breakdown-table th,
+        .breakdown-table td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #475569;
+        }
+
+        .breakdown-table th {
+            color: #64748b;
+            font-weight: 500;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+        }
+
+        .breakdown-table td {
+            font-family: 'Roboto Mono', monospace;
+        }
+
+        .breakdown-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .market-tag {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            margin-right: 6px;
+        }
+
+        .market-tag.poly {
+            background: rgba(59, 130, 246, 0.3);
+            color: #3b82f6;
+        }
+
+        .market-tag.trad {
+            background: rgba(16, 185, 129, 0.3);
+            color: #10b981;
+        }
+
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .summary-card {
+            background: #334155;
+            border-radius: 10px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .summary-card .label {
+            font-size: 0.8rem;
+            color: #64748b;
+            margin-bottom: 8px;
+        }
+
+        .summary-card .value {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+
+        .summary-card .value.profit {
+            color: #22c55e;
+        }
+
+        .summary-card .value.loss {
+            color: #ef4444;
+        }
+
+        .no-arbitrage {
+            text-align: center;
+            padding: 40px;
+            color: #94a3b8;
+        }
+
+        .no-arbitrage .icon {
+            font-size: 3rem;
+            margin-bottom: 16px;
+        }
+
+        .info-box {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 16px;
+            font-size: 0.8rem;
+            color: #94a3b8;
+        }
+
+        .info-box strong {
+            color: #3b82f6;
+        }
+
+        .clear-btn {
+            background: transparent;
+            border: 1px solid #475569;
+            color: #94a3b8;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+
+        .clear-btn:hover {
+            background: #334155;
+            color: #f8fafc;
+        }
+
+        .formula-display {
+            background: #0f172a;
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 12px;
+            font-family: 'Roboto Mono', monospace;
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+
+        .formula-display .formula {
+            color: #3b82f6;
+            margin-bottom: 4px;
+        }
+
+        .verification-section {
+            background: #1e293b;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 16px;
+        }
+
+        .verification-section h4 {
+            color: #f8fafc;
+            margin-bottom: 12px;
+            font-size: 0.95rem;
+        }
+
+        .verification-row {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .verification-item {
+            background: #334155;
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+        }
+
+        .verification-item .outcome {
+            font-size: 0.75rem;
+            color: #64748b;
+            margin-bottom: 4px;
+        }
+
+        .verification-item .profit {
+            font-family: 'Roboto Mono', monospace;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+
+        .verification-item .profit.positive {
+            color: #22c55e;
+        }
+
+        .verification-item .profit.negative {
+            color: #ef4444;
+        }
+
+        .example-box {
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 12px;
+            font-size: 0.8rem;
+            color: #94a3b8;
+        }
+
+        .example-box strong {
+            color: #10b981;
+        }
+
+        .poly-combo {
+            font-size: 0.75rem;
+            color: #64748b;
+            margin-top: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>足球套利计算器</h1>
+            <p>Polymarket + 传统盘口对冲策略计算</p>
+            <button class="clear-btn" onclick="resetAll()" style="margin-top: 12px;">重置数据</button>
+        </header>
+
+        <div class="main-content">
+            <!-- 左侧：输入区 -->
+            <div class="input-section">
+                <!-- Polymarket 面板 -->
+                <div class="panel">
+                    <div class="panel-header poly">
+                        <svg class="icon" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                        </svg>
+                        <h2>Polymarket 预测市场 (三元组合)</h2>
+                    </div>
+                    <div class="panel-body">
+                        <div class="bet-amount-section">
+                            <label>投注金额 (美元)</label>
+                            <input type="number" id="polyAmount" value="100" min="0" step="1" 
+                                   placeholder="输入金额">
+                            <div class="amount-display">
+                                获奖金额 = 投注金额 / 赔率
+                            </div>
+                        </div>
+
+                        <div class="input-row">
+                            <div class="input-group">
+                                <label>主不败赔率</label>
+                                <div class="input-wrapper poly">
+                                    <input type="number" id="polyHome" value="0.46" min="0.01" step="0.01" placeholder="如: 0.46">
+                                </div>
+                                <div class="poly-combo">= 主胜 + 平局</div>
+                            </div>
+                            <div class="input-group">
+                                <label>不平局赔率</label>
+                                <div class="input-wrapper poly">
+                                    <input type="number" id="polyNoDraw" value="0.45" min="0.01" step="0.01" placeholder="如: 0.45">
+                                </div>
+                                <div class="poly-combo">= 主胜 + 客胜</div>
+                            </div>
+                            <div class="input-group">
+                                <label>主不胜赔率</label>
+                                <div class="input-wrapper poly">
+                                    <input type="number" id="polyNotHome" value="0.55" min="0.01" step="0.01" placeholder="如: 0.55">
+                                </div>
+                                <div class="poly-combo">= 平局 + 客胜</div>
+                            </div>
+                        </div>
+
+                        <div class="formula-display">
+                            <div class="formula">获奖金额 = 投注金额 / 赔率</div>
+                            <div>例如: 投100，主不胜赔率0.55 → 100 / 0.55 = 181.82</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 传统盘口 面板 -->
+                <div class="panel" style="margin-top: 20px;">
+                    <div class="panel-header trad">
+                        <svg class="icon" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                        </svg>
+                        <h2>传统博彩盘口</h2>
+                    </div>
+                    <div class="panel-body">
+                        <div class="input-row">
+                            <div class="input-group">
+                                <label>主胜赔率</label>
+                                <div class="input-wrapper trad">
+                                    <input type="number" id="tradHome" value="1.85" min="0.01" step="0.01" placeholder="如: 1.85">
+                                </div>
+                            </div>
+                            <div class="input-group">
+                                <label>平局赔率</label>
+                                <div class="input-wrapper trad">
+                                    <input type="number" id="tradDraw" value="3.5" min="0.01" step="0.01" placeholder="如: 3.5">
+                                </div>
+                            </div>
+                            <div class="input-group">
+                                <label>客胜赔率</label>
+                                <div class="input-wrapper trad">
+                                    <input type="number" id="tradAway" value="5.1" min="0.01" step="0.01" placeholder="如: 5.1">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="formula-display">
+                            <div class="formula">获奖金额 = 投注金额 × 赔率</div>
+                        </div>
+                    </div>
+                </div>
+
+                <button class="btn-calculate" onclick="calculateArbitrage()">
+                    计算套利策略
+                </button>
+            </div>
+
+            <!-- 右侧：结果区 -->
+            <div class="results-section">
+                <div class="panel">
+                    <div class="panel-header result">
+                        <svg class="icon" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                            <polyline points="22 4 12 14.01 9 11.01" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                        <h2>计算结果</h2>
+                    </div>
+                    <div class="panel-body">
+                        <div id="resultsContent">
+                            <div class="no-arbitrage">
+                                <div class="icon">📊</div>
+                                <p>请填写赔率数据并点击"计算套利策略"</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Polymarket获奖金额计算
+        function calculatePolyWinnings(amount, odds) {
+            // Polymarket公式: 获奖金额 = 投注金额 / 赔率
+            return amount / odds;
+        }
+
+        // 计算三种对冲策略
+        function calculateArbitrage() {
+            const polyAmount = parseFloat(document.getElementById('polyAmount').value) || 100;
+            
+            // Polymarket三元组合赔率
+            const polyHomeOdds = parseFloat(document.getElementById('polyHome').value) || 0.46;
+            const polyNoDrawOdds = parseFloat(document.getElementById('polyNoDraw').value) || 0.45;
+            const polyNotHomeOdds = parseFloat(document.getElementById('polyNotHome').value) || 0.55;
+            
+            // 传统盘口赔率
+            const tradHome = parseFloat(document.getElementById('tradHome').value) || 1.85;
+            const tradDraw = parseFloat(document.getElementById('tradDraw').value) || 3.5;
+            const tradAway = parseFloat(document.getElementById('tradAway').value) || 5.1;
+
+            // 策略1: 传统平 ↔ Polymarket不平局（只投一个选项）
+            // Poly不平局 = 主胜 + 客胜，对冲传统平局
+            const polyNoDrawWinnings = calculatePolyWinnings(polyAmount, polyNoDrawOdds);
+            const tradDrawStake1 = polyNoDrawWinnings / tradDraw; // 传统投平局
+            const totalCost1 = polyAmount + tradDrawStake1;
+            const profit1 = polyNoDrawWinnings - totalCost1;
+            const roi1 = (profit1 / totalCost1) * 100;
+
+            // 策略2: 传统主胜 ↔ Polymarket主不胜（只投一个选项）
+            // Poly主不胜 = 平局 + 客胜，对冲传统主胜
+            const polyNotHomeWinnings = calculatePolyWinnings(polyAmount, polyNotHomeOdds);
+            const tradHomeStake2 = polyNotHomeWinnings / tradHome; // 传统投主胜
+            const totalCost2 = polyAmount + tradHomeStake2;
+            const profit2 = polyNotHomeWinnings - totalCost2;
+            const roi2 = (profit2 / totalCost2) * 100;
+
+            // 策略3: 传统客胜 ↔ Polymarket主不败（只投一个选项）
+            // Poly主不败 = 主胜 + 平局，对冲传统客胜
+            const polyHomeWinnings = calculatePolyWinnings(polyAmount, polyHomeOdds);
+            const tradAwayStake3 = polyHomeWinnings / tradAway; // 传统投客胜
+            const totalCost3 = polyAmount + tradAwayStake3;
+            const profit3 = polyHomeWinnings - totalCost3;
+            const roi3 = (profit3 / totalCost3) * 100;
+
+            // 选择最佳策略
+            const strategies = [
+                { name: '策略1', desc: '传统平 ↔ Poly不平局', profit: profit1, roi: roi1, totalCost: totalCost1 },
+                { name: '策略2', desc: '传统主胜 ↔ Poly主不胜', profit: profit2, roi: roi2, totalCost: totalCost2 },
+                { name: '策略3', desc: '传统客胜 ↔ Poly主不败', profit: profit3, roi: roi3, totalCost: totalCost3 }
+            ];
+            
+            const bestStrategy = strategies.reduce((best, current) => current.profit > best.profit ? current : best);
+
+            let html = `
+                <div class="summary-cards">
+                    <div class="summary-card">
+                        <div class="label">最佳策略净利润</div>
+                        <div class="value ${bestStrategy.profit > 0 ? 'profit' : 'loss'}">
+                            ${bestStrategy.profit > 0 ? '+' : ''}${bestStrategy.profit.toFixed(2)}
+                        </div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="label">ROI</div>
+                        <div class="value ${bestStrategy.roi > 0 ? 'profit' : 'loss'}">
+                            ${bestStrategy.roi > 0 ? '+' : ''}${bestStrategy.roi.toFixed(2)}%
+                        </div>
+                    </div>
+                    <div class="summary-card">
+                        <div class="label">总投入成本</div>
+                        <div class="value">${bestStrategy.totalCost.toFixed(2)}</div>
+                    </div>
+                </div>
+            `;
+
+            // 渲染每个策略
+            const strategyDetails = [
+                {
+                    name: '策略1: 传统平 ↔ Polymarket不平局',
+                    polyOption: '不平局 (主胜+客胜)',
+                    polyWinnings: polyNoDrawWinnings,
+                    polyStake: polyAmount,
+                    polyOdds: polyNoDrawOdds,
+                    tradOption: '平局',
+                    tradStake: tradDrawStake1,
+                    tradOdds: tradDraw,
+                    profit: profit1,
+                    roi: roi1,
+                    totalCost: totalCost1,
+                    isBest: bestStrategy.name === '策略1'
+                },
+                {
+                    name: '策略2: 传统主胜 ↔ Polymarket主不胜',
+                    polyOption: '主不胜 (平局+客胜)',
+                    polyWinnings: polyNotHomeWinnings,
+                    polyStake: polyAmount,
+                    polyOdds: polyNotHomeOdds,
+                    tradOption: '主胜',
+                    tradStake: tradHomeStake2,
+                    tradOdds: tradHome,
+                    profit: profit2,
+                    roi: roi2,
+                    totalCost: totalCost2,
+                    isBest: bestStrategy.name === '策略2'
+                },
+                {
+                    name: '策略3: 传统客胜 ↔ Polymarket主不败',
+                    polyOption: '主不败 (主胜+平局)',
+                    polyWinnings: polyHomeWinnings,
+                    polyStake: polyAmount,
+                    polyOdds: polyHomeOdds,
+                    tradOption: '客胜',
+                    tradStake: tradAwayStake3,
+                    tradOdds: tradAway,
+                    profit: profit3,
+                    roi: roi3,
+                    totalCost: totalCost3,
+                    isBest: bestStrategy.name === '策略3'
+                }
+            ];
+
+            strategyDetails.forEach(strategy => {
+                const profitClass = strategy.profit >= 0 ? 'positive' : 'negative';
+                const tradWinnings = strategy.tradStake * strategy.tradOdds;
+                
+                html += `
+                    <div class="strategy-card ${strategy.isBest ? 'best' : ''} ${strategy.profit < 0 ? 'loss' : ''}">
+                        <div class="strategy-header">
+                            <div class="strategy-title">${strategy.name}</div>
+                            ${strategy.isBest ? '<span class="badge best">最佳策略</span>' : ''}
+                        </div>
+                        
+                        <table class="breakdown-table">
+                            <thead>
+                                <tr>
+                                    <th>市场</th>
+                                    <th>选项</th>
+                                    <th>赔率</th>
+                                    <th>投注金额</th>
+                                    <th>获奖金额</th>
+                                    <th>净收益</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><span class="market-tag poly">Poly</span></td>
+                                    <td>${strategy.polyOption}</td>
+                                    <td>${strategy.polyOdds}</td>
+                                    <td>${strategy.polyStake.toFixed(2)}</td>
+                                    <td>${strategy.polyWinnings.toFixed(2)}</td>
+                                    <td class="${profitClass}">
+                                        ${strategy.profit >= 0 ? '+' : ''}${(strategy.polyWinnings - strategy.polyStake).toFixed(2)}
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><span class="market-tag trad">传统</span></td>
+                                    <td>${strategy.tradOption}</td>
+                                    <td>${strategy.tradOdds}</td>
+                                    <td>${strategy.tradStake.toFixed(2)}</td>
+                                    <td>${tradWinnings.toFixed(2)}</td>
+                                    <td class="${profitClass}">
+                                        ${strategy.profit >= 0 ? '+' : ''}${(tradWinnings - strategy.tradStake).toFixed(2)}
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                        <div class="strategy-details" style="margin-top: 12px;">
+                            <div class="detail-item">
+                                <div class="label">Poly投入</div>
+                                <div class="value">${strategy.polyStake.toFixed(2)}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="label">传统投入</div>
+                                <div class="value">${strategy.tradStake.toFixed(2)}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="label">总投入</div>
+                                <div class="value">${strategy.totalCost.toFixed(2)}</div>
+                            </div>
+                            <div class="detail-item">
+                                <div class="label">净利润</div>
+                                <div class="value ${profitClass}">
+                                    ${strategy.profit >= 0 ? '+' : ''}${strategy.profit.toFixed(2)}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            // 验证结果
+            html += `
+                <div class="verification-section">
+                    <h4>验证结果</h4>
+                    <div class="verification-row">
+                        <div class="verification-item">
+                            <div class="outcome">策略1净利润 (不平局)</div>
+                            <div class="profit ${profit1 >= 0 ? 'positive' : 'negative'}">
+                                ${profit1 >= 0 ? '+' : ''}${profit1.toFixed(2)}
+                            </div>
+                        </div>
+                        <div class="verification-item">
+                            <div class="outcome">策略2净利润 (主不胜)</div>
+                            <div class="profit ${profit2 >= 0 ? 'positive' : 'negative'}">
+                                ${profit2 >= 0 ? '+' : ''}${profit2.toFixed(2)}
+                            </div>
+                        </div>
+                    </div>
+                    <div style="text-align: center; margin-top: 8px;">
+                        <div class="verification-item" style="display: inline-block; width: calc(50% - 4px);">
+                            <div class="outcome">策略3净利润 (主不败)</div>
+                            <div class="profit ${profit3 >= 0 ? 'positive' : 'negative'}">
+                                ${profit3 >= 0 ? '+' : ''}${profit3.toFixed(2)}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // 添加说明
+            html += `
+                <div class="example-box">
+                    <strong>对冲策略说明：</strong><br>
+                    • 策略1: 传统平 ↔ Poly不平局（只投平局）<br>
+                    • 策略2: 传统主胜 ↔ Poly主不胜（只投主胜）<br>
+                    • 策略3: 传统客胜 ↔ Poly主不败（只投客胜）<br>
+                    <br>
+                    <strong>计算逻辑：</strong>固定Poly投注金额，计算传统盘口单选项投注金额，使两边获奖金额相等，利润一致。自动选择利润最高的策略。
+                </div>
+            `;
+
+            document.getElementById('resultsContent').innerHTML = html;
+        }
+
+        // 重置所有数据
+        function resetAll() {
+            document.getElementById('polyAmount').value = 100;
+            document.getElementById('polyHome').value = 0.46;
+            document.getElementById('polyNoDraw').value = 0.45;
+            document.getElementById('polyNotHome').value = 0.55;
+            document.getElementById('tradHome').value = 1.85;
+            document.getElementById('tradDraw').value = 3.5;
+            document.getElementById('tradAway').value = 5.1;
+            
+            document.getElementById('resultsContent').innerHTML = `
+                <div class="no-arbitrage">
+                    <div class="icon">📊</div>
+                    <p>请填写赔率数据并点击"计算套利策略"</p>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
